@@ -16,16 +16,22 @@ This repository contains scripts for analyzing single-cell RNA sequencing (scRNA
 
 To run this analysis, install the following software:
 
-CellRanger ARC: Processes raw sequencing data from 10X Genomics into feature-barcode matrices.
-Scanpy: Handles scRNA-seq analysis, including normalization, clustering, and differential expression.
-ArchR: Processes scATAC-seq data, including peak calling, motif enrichment, and differential accessibility analysis.
-Seurat & Signac: Used for multiome integration and additional analysis steps.
+**CellRanger ARC:** Processes raw sequencing data from 10X Genomics into feature-barcode matrices.
+
+**Scanpy:** Handles scRNA-seq analysis, including normalization, clustering, and differential expression.
+
+**ArchR:** Processes scATAC-seq data, including peak calling, motif enrichment, and differential accessibility analysis.
+
+**Seurat & Signac:** Used for multiome integration and additional analysis steps.
 
 ### 2. Data Processing
 
-2.1. Running CellRanger ARC
+**2.1. Running CellRanger ARC**
+
 Input raw FASTQ files into CellRanger ARC.
+
 Outputs include a filtered gene expression matrix (for scRNA-seq) and fragment files (for scATAC-seq).
+
 Ensures proper alignment to a reference genome and assigns unique molecular identifiers (UMIs).
 
 ### 3. Quality Control & Filtering
