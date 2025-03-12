@@ -43,7 +43,7 @@ Ensures proper alignment to a reference genome and assigns unique molecular iden
 Use the `multiome_qc_workflow.sh` pipeline to parallely create:
 1. Scanpy objects for each sample
 2. ArchR objects for each sample
-3. Run **Demuxfy Souporcell** for each sample
+3. Run **Demuxfy Souporcell** for each sample (post variant calling)
 4. Assign individual genotype for each sample
 
 Run `multiome_qc_workflow.sh --help` for guidlines
@@ -178,7 +178,17 @@ Generate summary figures such as heatmaps, volcano plots, and motif enrichment p
 
 Create interactive visualizations using tools like cellxgene or UCSC Genome Browser.
 
-### 9. Troubleshooting
+### 9. Variant Calling in Single-Cell Multiome Data
+
+Variant calling in single-cell RNA and ATAC-seq data helps identify genetic mutations, single nucleotide variants (SNVs), and structural variations at the single-cell level. This process can reveal clonal heterogeneity, somatic mutations, and their effects on gene expression and chromatin accessibility.
+
+Before calling variants, the sequencing data must be preprocessed:
+
+1. Read Alignment: The raw FASTQ files are aligned to the reference genome using a high-accuracy aligner like CellRanger ARC, STAR, or BWA.
+2. BAM File Processing: The output BAM files undergo sorting, duplicate removal, and quality filtering using tools like Samtools or Picard.
+3. Base Quality Score Recalibration (BQSR): Improves accuracy by correcting systematic sequencing errors using GATK.
+
+### 10. Troubleshooting
 
 Common Issues and Solutions
 
