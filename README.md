@@ -36,7 +36,17 @@ Ensures proper alignment to a reference genome and assigns unique molecular iden
 
 ### 3. Quality Control & Filtering
 
-**3.1. scRNA-seq Quality Control (QC) using Scanpy**
+**3.1. Create scRNA and scATAC, scanpy and ArchR objects**
+
+Use the `multiome_qc_workflow.sh` pipeline to parallely create:
+1. scanpy objects for each sample
+2. ArchR objects for each sample
+3. Run **Demuxfy Souporcell** for each sample
+4. Assign individual genotype for each sample
+
+Run `multiome_qc_workflow.sh --help` for guidlines
+
+**3.2. scRNA-seq Quality Control (QC) using Scanpy**
 
 Filter out low-quality cells based on:
 
@@ -48,7 +58,7 @@ Percentage of mitochondrial gene expression.
 
 Remove doublets using tools like **Scrublet** or **DoubletFinder**.
 
-**3.2. scATAC-seq Quality Control using ArchR**
+**3.3. scATAC-seq Quality Control using ArchR**
 
 Assess TSS Enrichment to evaluate chromatin accessibility signal.
 
