@@ -1,6 +1,6 @@
 # Multiome (scRNA + scATAC) Analysis Pipeline
 
-This repository contains scripts for analyzing single-cell RNA sequencing (scRNA-seq) and single-cell ATAC sequencing (scATAC-seq) multiome data. The workflow is designed to ensure high-quality cell filtering, annotation, differential analysis, and advanced computational techniques for exploring regulatory mechanisms.
+This repository contains scripts for analyzing single-cell RNA sequencing (scRNA-seq) and single-cell ATAC sequencing (scATAC-seq) multiome data on HPC (High-Performance Computing) systems running Linux/Unix. The workflow ensures high-quality cell filtering, annotation, differential analysis, and advanced computational techniques for exploring regulatory mechanisms. It is designed to be scalable across multiple samples by submitting parallel jobs, optimizing efficiency and performance.
 
 ## Table of Contents
 1. Installation & Dependencies
