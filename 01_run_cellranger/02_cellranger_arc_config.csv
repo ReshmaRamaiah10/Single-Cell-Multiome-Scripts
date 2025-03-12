@@ -1,0 +1,9 @@
+library_id,fragments,cells
+MAZ1,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ1/outs/fragments.tsv.gz,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ1/outs/singlecell.csv
+MAZ2,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ2/outs/fragments.tsv.gz,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ2/outs/singlecell.csv
+MAZ3,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ3/outs/fragments.tsv.gz,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ3/outs/singlecell.csv
+MAZ4,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ4/outs/fragments.tsv.gz,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ4/outs/singlecell.csv
+MAZ5,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ5/outs/fragments.tsv.gz,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ5/outs/singlecell.csv
+MAZ6,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ6/outs/fragments.tsv.gz,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ6/outs/singlecell.csv
+MAZ7,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ7/outs/fragments.tsv.gz,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ7/outs/singlecell.csv
+MAZ8,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ8/outs/fragments.tsv.gz,/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/MAZ8/outs/singlecell.csv
