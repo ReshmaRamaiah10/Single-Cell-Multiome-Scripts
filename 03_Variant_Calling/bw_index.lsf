@@ -1,0 +1,16 @@
+#!/bin/bash
+#BSUB -J bw_index
+#BSUB -q gpuqueue
+#BSUB -W 12:00
+#BSUB -n 2
+#BSUB -R rusage[mem=100]
+#BSUB -e /data/niecr/cheongj/ibd/additional_genotype_fastq/%J.err
+#BSUB -o /data/niecr/cheongj/ibd/additional_genotype_fastq/%J.out
+
+source ~/.bashrc
+
+conda activate varcaller
+cd /data/niecr/cheongj/ibd/additional_genotype_fastq
+bwa-mem2 index -p hg38_bw2 /data/peer/lpaddock/data/ref/hg38/refdata-cellranger-arc-GRCh38-2020-A-2.0.0/fasta/genome.fa
+
+conda deactivate
