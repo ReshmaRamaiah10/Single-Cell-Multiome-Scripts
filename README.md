@@ -30,11 +30,11 @@ Follow the `Installation and setup` guidelines to set up a multiome conda enviro
 
 **2.1. Running CellRanger ARC**
 
-Input raw FASTQ files into CellRanger ARC.
+* Input raw FASTQ files into CellRanger ARC.
 
-Outputs include a filtered gene expression matrix (for scRNA-seq) and fragment files (for scATAC-seq).
+* Outputs include a filtered gene expression matrix (for scRNA-seq) and fragment files (for scATAC-seq).
 
-Ensures proper alignment to a reference genome and assigns unique molecular identifiers (UMIs).
+* Ensures proper alignment to a reference genome and assigns unique molecular identifiers (UMIs).
 
 ### 3. Quality Control & Filtering
 
@@ -52,11 +52,9 @@ Run `multiome_qc_workflow.sh --help` for guidlines
 
 Filter out low-quality cells based on:
 
-Number of detected genes per cell.
-
-Total number of UMI counts.
-
-Percentage of mitochondrial gene expression.
+* Number of detected genes per cell.
+* Total number of UMI counts.
+* Percentage of mitochondrial gene expression.
 
 Remove doublets using tools like **Scrublet** or **DoubletFinder**.
 
