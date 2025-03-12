@@ -1,0 +1,325 @@
+library(ArchR)
+library(parallel)
+library(stringr)
+library(dplyr)
+library(ChIPseeker) 
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)  
+library(GenomicRanges) 
+library(org.Hs.eg.db)
+library(org.Mm.eg.db)
+library(genomation)
+library(readr)
+library(ggplot2)
+library(patchwork)
+library(tidyr)
+library(openxlsx)
+library(readxl)
+library(ggrepel)
+library(wesanderson)
+library(BSgenome.Mmusculus.UCSC.mm10)
+library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+
+
+addArchRThreads(threads = 16)
+addArchRGenome('mm10')
+
+#reference <- TxDb.Mmusculus.UCSC.mm10.knownGene
+#database <- "org.Mm.eg.db"
+#reference <- TxDb.Hsapiens.UCSC.hg38.knownGene
+#database <- "org.Hs.eg.db"
+pathToMacs2 <- findMacs2()
+
+#--------------------------------------------------------#
+#                         FUNCTIONS 
+#--------------------------------------------------------#
+
+# Function to generate marker peaks
+generate_marker_peaks <- function(proj, groupBy, useGroups, bgdGroups, title) {
+    # Perform marker feature identification
+    markerTest <- getMarkerFeatures(
+      ArchRProj = proj, 
+      useMatrix = "PeakMatrix",
+      groupBy =groupBy,
+      testMethod = "wilcoxon",
+      useGroups = useGroups,
+      bgdGroups = bgdGroups
+    )
+    return(markerTest)
+}
+
+# Function to annotate peaks and save results
+generate_peakannotation <- function(markerTest,file_path,title) {
+    # Extract assay and row data
+    assay_data <- assays(markerTest)
+    row_data <- rowData(markerTest)
+    
+    # Combine relevant data into a dataframe 
+    combined_df <- cbind(as.data.frame(row_data), 
+                         Log2FC = assay_data$Log2FC, 
+                         Mean = assay_data$Mean, 
+                         FDR = assay_data$FDR, 
+                         Pval = assay_data$Pval, 
+                         MeanDiff = assay_data$MeanDiff, 
+                         AUC = assay_data$AUC)
+    colnames(combined_df) <- c("seqnames", "idx","start","end","Log2FC","Mean","FDR","Pval","MeanDiff","AUC")
+    file_path1 <- file.path(file_path, paste0(title, '_diff_peaks.csv'))
+    write.csv(combined_df, file = file_path1, row.names = FALSE)
+    
+    # annotate the peaks
+    marker_data <- readGeneric(file_path1, chr = 1, start = 3, end = 4, strand = NULL,
+                               meta.cols = c(Log2FC=5,Mean=6,FDR=7,Pval=8,MeanDiff=9,AUC=10), 
+                               keep.all.metadata = FALSE, zero.based = FALSE,remove.unusual = FALSE, 
+                               header = TRUE, skip = 0, sep = ",")
+    toOverLap <- promoters(TxDb.Mmusculus.UCSC.mm10.knownGene, upstream = 500, downstream = 500)
+    anno_res_tss <- annotatePeak(marker_data, TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,annoDb="org.Mm.eg.db",verbose = FALSE)
+    anno_res_tss <- as.data.frame(anno_res_tss)
+    file_path2 <- file.path(file_path,paste0(title,'_diff_peaks_annotated.csv'))
+    write.csv(anno_res_tss, file = file_path2, row.names = FALSE)
+    return(anno_res_tss)
+}
+
+# Function to generate marker plots
+generate_markerplots <- function(anno_res_tss,title) {
+    df <- anno_res_tss
+    # Plot Pval volcano plot
+    df$sig <- "non-significant"
+    df$direction <- NA
+    df$label <- NA
+    df$sig[df$Pval < 0.01] <- "significant"
+    df$direction[df$Log2FC > 0] <- "up" 
+    df$direction[df$Log2FC < 0] <- "down" 
+    
+    df$label[df$Log2FC > 0.5 & df$Pval < 0.01] <- df$SYMBOL[df$Log2FC > 0.5 & df$Pval < 0.01]
+    df$label[df$Log2FC < -0.5 & df$Pval < 0.01] <- df$SYMBOL[df$Log2FC < -0.5 & df$Pval < 0.01]
+    
+    df$label[df$Pval > sort(df$Pval)[50]] <- NA  # Keep only top n based on p-value
+    df$label[df$Log2FC < sort(abs(df$Log2FC), decreasing = TRUE)[50]] <- NA  # Also restrict by absolute Log2FC
+    
+
+    p1 <- ggplot(df, aes(x = Log2FC, y = -log(Pval), label = label))+ 
+    geom_point() + geom_point(data = subset(df, sig =="significant"), mapping = aes(color = direction))+ylab("-log(Pval)")+
+    xlab("Log2FC")+xlim(c(-7, 7))+ 
+    geom_text_repel(data = subset(df, df$direction== "up") ,size = 3,max.overlaps = 10,xlim = c(5,6),hjust=0,
+                  force= 0.1,direction ="y",segment.size = 0.2,segment.color = "grey50")+
+    geom_text_repel(data = subset(df, df$direction== "down" ) ,size = 3,max.overlaps = 10,xlim = c(-6,-5),hjust=0,
+                  force= 0.1,direction ="y",segment.size = 0.2,segment.color = "grey50")+
+    theme_classic() + scale_color_manual(values =rev(wes_palette(n=2, name="Darjeeling1", type = "discrete")))+
+    ggtitle("Pval < 0.01")
+    
+    # Plot FDR volcano plot
+    df$sig <- "non-significant"
+    df$direction <- NA
+    df$label <- NA
+    df$sig[df$Pval < 0.01 & df$FDR < 0.05] <- "significant"
+    df$direction[df$Log2FC > 0] <- "up" 
+    df$direction[df$Log2FC < 0] <- "down" 
+    
+    df$label[df$Log2FC > 0.5 & df$Pval < 0.01 & df$FDR < 0.05] <- df$SYMBOL[df$Log2FC > 0.5 & df$Pval < 0.01 & df$FDR < 0.05]
+    df$label[df$Log2FC < -0.5 & df$Pval < 0.01 & df$FDR < 0.05] <- df$SYMBOL[df$Log2FC < -0.5 & df$Pval < 0.01 & df$FDR < 0.05]
+    
+    df$label[df$Pval > sort(df$Pval)[50] & df$FDR > sort(df$FDR)[50]] <- NA  # Keep only top n based on p-value/FDR
+    df$label[df$Log2FC < sort(abs(df$Log2FC), decreasing = TRUE)[50]] <- NA  # Also restrict by absolute Log2FC
+
+
+    p2 <- ggplot(df, aes(x = Log2FC, y = -log(FDR), label = label))+
+    geom_point() + geom_point(data = subset(df, sig =="significant"), mapping = aes(color = direction))+ylab("-log(FDR)")+
+    xlab("Log2FC")+xlim(c(-7, 7))+
+    geom_text_repel(data = subset(df, df$direction== "up") ,size = 3,max.overlaps = 10,xlim = c(5,6),hjust=0,
+                  force= 0.1,direction ="y",segment.size = 0.2,segment.color = "grey50")+
+    geom_text_repel(data = subset(df, df$direction== "down" ) ,size = 3,max.overlaps = 10,xlim = c(-6,-5),hjust=0,
+                  force= 0.1,direction ="y",segment.size = 0.2,segment.color = "grey50")+
+    theme_classic() + scale_color_manual(values =rev(wes_palette(n=2, name="Darjeeling1", type = "discrete")))+
+    ggtitle("FDR <= 0.01 & Log2FC >= 1")
+    
+    volcano_plot <- p1 + p2 + plot_layout(ncol = 2) + plot_annotation(title = title)
+
+    # Plot distribution
+    subset_df <- subset(anno_res_tss, Pval < 0.01)
+    plot_FDR <- ggplot(subset_df, aes(x = FDR)) + geom_density(fill = "blue", alpha = 0.3) + 
+                    labs(title = "Density Plot of FDR", x = "FDR", y = "Density") + theme_minimal()
+    plot_Log2FC <- ggplot(subset_df, aes(x = Log2FC)) + geom_density(fill = "red", alpha = 0.3) + 
+                    labs(title = "Density Plot of Log2FC", x = "Log2FC", y = "Density") + theme_minimal()
+    plot_Pval <- ggplot(subset_df, aes(x = Pval)) + geom_density(fill = "green", alpha = 0.3) + 
+                    labs(title = "Density Plot of Pval", x = "Pval", y = "Density") + theme_minimal()
+    density_plot <- plot_FDR + plot_Log2FC + plot_Pval + plot_layout(ncol = 3) + plot_annotation(title = title)
+        
+    return(list(
+      volcano_plot = volcano_plot,
+      density_plot = density_plot
+    ))
+}
+    
+    
+# Function to perform motif enrichment
+process_marker_tests <- function(markerTest,proj,title,reference,group) {
+  
+  # Perform peak annotation enrichment for "up" motifs
+  motifsUp <- peakAnnoEnrichment(seMarker = markerTest,ArchRProj = proj,peakAnnotation = "Motif",
+    cutOff = "FDR <= 0.1 & Log2FC >= 0.5")
+  
+  # Create data frame for motifsUp
+  df_up <- data.frame(TF = rownames(motifsUp), mlog10Padj = assay(motifsUp)[,1])
+  df_up <- df_up[order(df_up$mlog10Padj, decreasing = TRUE),]
+  df_up$rank <- seq_len(nrow(df_up))
+  df_up$df_peak <- "up"
+
+  # Perform peak annotation enrichment for "down" motifs
+  motifsDo <- peakAnnoEnrichment(seMarker = markerTest,ArchRProj = proj,peakAnnotation = "Motif",
+    cutOff = "FDR <= 0.1 & Log2FC <= -0.5")
+  
+  # Create data frame for motifsDo
+  df_down <- data.frame(TF = rownames(motifsDo), mlog10Padj = assay(motifsDo)[,1])
+  df_down <- df_down[order(df_down$mlog10Padj, decreasing = TRUE),]
+  df_down$rank <- seq_len(nrow(df_down))
+  df_down$df_peak <- "down"
+
+  # Save the combined data frame 
+  combined_df_peaks <- rbind(df_up, df_down)
+
+  # Generate ggplot for "up" motifs
+  ggUp <- ggplot(df_up, aes(rank, mlog10Padj, color = mlog10Padj)) + 
+    geom_point(size = 1) +
+    ggrepel::geom_label_repel(
+      data = df_up[rev(seq_len(30)), ], aes(x = rank, y = mlog10Padj, label = TF), 
+      size = 1.5,nudge_x = 2,color = "black") + theme_ArchR() + 
+    ylab("-log10(P-adj) Motif Enrichment") + xlab("Rank Sorted TFs Enriched") +
+    scale_color_gradientn(colors = paletteContinuous(set = "comet"))+ggtitle(paste0(group," FDR <= 0.1 & Log2FC >= 0.5"))
+
+  # Generate ggplot for "down" motifs
+  ggDo <- ggplot(df_down, aes(rank, mlog10Padj, color = mlog10Padj)) + 
+    geom_point(size = 1) +
+    ggrepel::geom_label_repel(
+      data = df_down[rev(seq_len(30)), ], aes(x = rank, y = mlog10Padj, label = TF), 
+      size = 1.5,nudge_x = 2,color = "black") + theme_ArchR() + 
+    ylab("-log10(P-adj) Motif Enrichment") + xlab("Rank Sorted TFs Enriched") +
+    scale_color_gradientn(colors = paletteContinuous(set = "comet"))+ggtitle(paste0(reference," FDR <= 0.1 & Log2FC <= -0.5"))
+    
+  motif_plot <- ggDo + ggUp + plot_layout(ncol = 2) + plot_annotation(title = title)
+
+  return(list(
+      df_motifs = combined_df_peaks,
+      motif_plot = motif_plot
+    ))
+}    
+    
+#--------------------------------------------------------#
+#                  RUN THE FUNCTIONS 
+#--------------------------------------------------------#
+
+# initialize inputs
+Archr_dir <- '/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/intermediate_results/merged_ArchR_Bladder'
+Archr_proj_name <- 'Neutrophils'
+output_dir <- '/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/results/diff_peaks/neutrophils2c'
+colname <- 'Sample2'
+
+DGE_comparison <- list(
+  `1` = list(colname = 'Sample2', reference = 'PBS', group = 'BG-pre'),
+  `2` = list(colname = 'Sample2', reference = 'PBS', group = 'BG-post'),
+  `3` = list(colname = 'Sample2', reference = 'PBS', group = 'BG-BCG'),
+  `4` = list(colname = 'Sample2', reference = 'BG-pre', group = 'BG-post'),
+  `5` = list(colname = 'Sample2', reference = 'BG-pre', group = 'BG-BCG'),
+  `6` = list(colname = 'Sample2', reference = 'BG-post', group = 'BG-BCG')
+)
+
+dir.create(output_dir)
+setwd(Archr_dir)
+# Load ArchR project and call peaks/motifs
+proj <- loadArchRProject(file.path(Archr_dir,Archr_proj_name))
+
+# Subset Neutrophils
+#idxSample <- BiocGenerics::which(proj$Cell_Annotation1 %in% "Neutrophils")
+#cellsSample <- proj$cellNames[idxSample]
+#sub_proj <- proj[cellsSample, ]
+#proj <- subsetArchRProject(ArchRProj = proj,cells = getCellNames(sub_proj),outputDirectory = "Neutrophils",dropCells = TRUE)
+
+# Pseudobulk
+#proj <- addGroupCoverages(proj, groupBy = colname, force = TRUE)
+#proj <- addReproduciblePeakSet(ArchRProj = proj, groupBy = colname, pathToMacs2 = pathToMacs2,force = TRUE)
+#proj <- addPeakMatrix(proj, ceiling=10^9,force = TRUE)
+#proj <- addMotifAnnotations(ArchRProj = proj, motifSet = "cisbp", name = "Motif",force = TRUE)
+#proj <- saveArchRProject(ArchRProj = proj)
+
+#Clusters
+proj <- addGroupCoverages(proj,force = TRUE)
+proj <- addReproduciblePeakSet(ArchRProj = proj,pathToMacs2 = pathToMacs2,force = TRUE)
+proj <- addPeakMatrix(proj, ceiling=10^9,force = TRUE)
+proj <- addMotifAnnotations(ArchRProj = proj, motifSet = "cisbp", name = "Motif",force = TRUE)
+
+# initialize results
+density_plots <- list()
+volcano_plots <- list()
+motif_plots <- list()
+marker_df <- list()
+motif_df <- list()
+
+# Run diff peak analysis
+for (key in names(DGE_comparison)) {
+  entry <- DGE_comparison[[key]]
+  group_by <- entry$colname
+  reference <- entry$reference
+  group <- entry$group
+  print(paste("Reference:", reference, "Group:", group))
+  title <- paste0(reference, "_VS_", group)
+  title2 <- paste0(gsub("[-_]", "", reference), "-", gsub("[-_]", "", group))
+    
+  # Run marker test
+  setwd(Archr_dir)
+  markerTest <- generate_marker_peaks(proj, group_by, useGroups=group, bgdGroups=reference, title=title)
+  
+  # Annotate peaks
+  anno_res_tss <- generate_peakannotation(markerTest,file_path=output_dir,title=title)
+  marker_df[[title2]] <- anno_res_tss
+
+  # Plot peaks
+  results1 <- generate_markerplots(anno_res_tss,title)
+  density_plots[[key]] <- results1$density_plot
+  volcano_plots[[key]] <- results1$volcano_plot
+
+  # Run peak annotation
+  results2 <- process_marker_tests(markerTest,proj,title=title,reference=reference,group=group)
+  motif_plots[[key]] <- results2$motif_plot
+  motif_df[[title2]] <- results2$df_motifs 
+}
+
+# Save results
+setwd(output_dir)
+# Save marker plots pdf
+pdf_file_name <- "all_diff_peaks_volcano_plots.pdf"
+pdf(pdf_file_name, width = 15, height = 7)
+for (key in names(DGE_comparison)) {
+    print(volcano_plots[[key]])
+    #print(motif_plots[[key]])
+}
+dev.off()
+pdf_file_name <- "all_diff_peaks_density_plots.pdf"
+pdf(pdf_file_name, width = 15, height = 7)
+for (key in names(DGE_comparison)) {
+    print(density_plots[[key]])
+}
+dev.off()
+pdf_file_name <- "all_diff_peaks_motifs_plots.pdf"
+pdf(pdf_file_name, width = 15, height = 7)
+for (key in names(DGE_comparison)) {
+    print(motif_plots[[key]])
+}
+dev.off()
+# save markers excelsheet
+saveRDS(marker_df,'diff_peaks_annotated.rds')
+file_path <- "diff_peaks_annotated.xlsx"
+sheets_list <- list()
+for (name in names(marker_df)) {
+    if (nchar(name) > 31) {truncated_name <- substr(name, 1, 31)} 
+    else {truncated_name <- name}
+    sheets_list[[truncated_name]] <- marker_df[[name]]
+}
+write.xlsx(sheets_list, file = file_path)
+# save motif enrichment excelsheet
+saveRDS(motif_df,'diff_ranked_motifs.rds')
+file_path <- "diff_ranked_motifs.xlsx"
+sheets_list <- list()
+for (name in names(motif_df)) {
+    if (nchar(name) > 31) {truncated_name <- substr(name, 1, 31)} 
+    else {truncated_name <- name}
+    sheets_list[[truncated_name]] <- motif_df[[name]]
+}
+write.xlsx(sheets_list, file = file_path)
