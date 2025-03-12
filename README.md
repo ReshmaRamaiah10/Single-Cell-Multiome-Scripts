@@ -24,6 +24,8 @@ To run this analysis, install the following software:
 
 **Seurat & Signac:** Used for multiome integration and additional analysis steps.
 
+Follow the `Installation and setup` guidelines to set up a multiome conda environment to perform all the analysis.
+
 ### 2. Data Processing
 
 **2.1. Running CellRanger ARC**
@@ -39,7 +41,7 @@ Ensures proper alignment to a reference genome and assigns unique molecular iden
 **3.1. Create scRNA and scATAC, scanpy and ArchR objects**
 
 Use the `multiome_qc_workflow.sh` pipeline to parallely create:
-1. scanpy objects for each sample
+1. Scanpy objects for each sample
 2. ArchR objects for each sample
 3. Run **Demuxfy Souporcell** for each sample
 4. Assign individual genotype for each sample
