@@ -6,28 +6,16 @@ library(Matrix)
 library(readr)
 library(BSgenome.Mmusculus.UCSC.mm10)
 
-data_dir <- '/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/cellranger_outs/'
-archr_dir <- '/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/intermediate_results/merged_ArchR'
-filtered_data_path <- "/athena/josefowiczlab/scratch/rer4011/projects/MAZ_andrew_data/intermediate_results/per_sample_Archr/"
-proj_name <- 'manually_filtered'
-sample_folders <- c('MAZ1','MAZ2','MAZ3','MAZ4','MAZ5','MAZ6','MAZ7','MAZ8')
+data_dir <- '/athena/josefowiczlab/scratch/rer4011/projects/tori_atac_data/cellranger_outs_batch1/'
+archr_dir <- '/athena/josefowiczlab/scratch/rer4011/projects/tori_atac_data/intermediate_results/merged_ArchR'
+filtered_data_path <- "/athena/josefowiczlab/scratch/rer4011/projects/tori_atac_data/intermediate_results/per_sample_Archr"
+proj_name <- 'manually_filtered1'
+sample_folders <- c("12_BCG_24h","13_BCG_24h","14_BCG_Ab_24h","15_BCG_Ab_24h","1_BCG_6wk","2_BCG_6wk","3_BCG_Ab_6wk",
+             "4_BCG_Ab_6wk","A1_BCG_2wk","A2_BCG_2wk","B1_BCG_Ab_2wk","B2_BCG_Ab_2wk","C1_ctrl_2wk","C2_ctrl_2wk")
+merged_metadata <- "/athena/josefowiczlab/scratch/rer4011/projects/tori_atac_data/results/metadata/01_merged_filtered_cells.csv"
 
 ## ################################################################################################
-# Merge all manually filtered cells
-
-dfs <- list()
-# Loop through each sample to read its respective CSV and process
-for (sample in sample_folders) {
-  file_path <- file.path(filtered_data_path, paste0(sample,'_ArchR'), "filtered_cells_metadata.csv")
-  df <- read.csv(file_path,row.names="X")
-  df$orig.ident <- sample 
-  df$orig.barcode <- str_split(rownames(df), "#", simplify = TRUE)[, 2]
-  dfs[[sample]] <- df
-}
-# Combine all data frames into one
-merged_df <- bind_rows(dfs)
-write_csv(merged_df, "/athena/josefowiczlab/scratch/rer4011/projects/tori_atac_data/results/metadata/02_merged_filtered_cells.csv")
-
+merged_df <- read.csv(merged_metadata)
 
 # ################################################################################################
 # Arrow files and project 
@@ -38,7 +26,7 @@ addArchRGenome('mm10')
 set.seed(42)
 
 # input file paths
-inputFiles <- file.path(data_dir, sample_folders, 'outs', 'fragments.tsv.gz')
+inputFiles <- file.path(data_dir, sample_folders, 'atac_fragments.tsv.gz')
 names(inputFiles) <- sample_folders
 barcodes_list <- split(merged_df$orig.barcode, merged_df$orig.ident)
 
@@ -94,17 +82,6 @@ proj <- addUMAP(proj)
 # Save
 proj <- saveArchRProject(ArchRProj = proj)
 
-# Add doublet score
-proj <- addDoubletScores(
-  input = proj,
-  k = 10,
-  knnMethod = "UMAP",
-  LSIMethod = 1
-)
-
-# Save the project
-saveArchRProject(ArchRProj = proj, outputDirectory = proj_name, load = FALSE)
-
 ##############################################################################################
 #Additional analysis
 
@@ -145,6 +122,13 @@ names(reordered_features) <- sprintf("Peak%d", 1:length(reordered_features))
 write.csv(as.data.frame(reordered_features), sprintf('%s/export/peak_counts/peaks.csv', proj_name), quote=FALSE)
 
 # ################################################################################################
+# Add doublet score
+proj <- addDoubletScores(
+  input = proj,
+  k = 10,
+  knnMethod = "UMAP",
+  LSIMethod = 1
+)
 
 # chromVAR scores
 proj <- addMotifAnnotations(ArchRProj = proj, motifSet = "cisbp", name = "Motif")
