@@ -38,11 +38,35 @@ Follow the `Installation and setup` guidelines to set up a multiome conda enviro
 
 **3.1. Create scRNA and scATAC, scanpy and ArchR objects**
 
-Use the `multiome_qc_workflow.sh` pipeline to parallely create:
+The `multiome_qc_workflow.sh` script processes RNA and ATAC data for single-cell multiome experiments. It supports sample selection, doublet detection via Souporcell, and genotype correlation parallely.
+
 1. Scanpy objects for each sample
 2. ArchR objects for each sample
 3. Run **Demuxfy Souporcell** for each sample (post variant calling)
 4. Assign individual genotype for each sample
+
+**Usage:**
+```
+sh multiome_qc_workflow.sh [OPTIONS]
+```
+## Options
+
+| Option              | Description |
+|---------------------|-------------|
+| `--all_samples`     | Process all available samples. |
+| `--include_samples` | Process specific samples (comma-separated list). |
+| `--skip_samples`    | Exclude specific samples from processing. |
+| `--rna`            | Process RNA data. |
+| `--atac`           | Process ATAC data. |
+| `--souporcell`     | Run Souporcell for RNA doublet detection. |
+| `--assign_geno`    | Correlate clusters to donor SNP genotypes. |
+| `--overwrite_rna`  | Overwrite existing RNA preprocessing results. |
+| `-i, --input`      | **(Required)** Input directory path. |
+| `-o, --output`     | **(Required)** Output directory path. |
+| `-d, --dd_file`    | **(Required for Souporcell)** CSV file containing `sample_name,n_genotypes,vcf_file`. |
+| `-r, --ref_genome` | Reference genome directory for doublet detection. |
+| `-h, --help`       | Help commands |
+
 
 Run `multiome_qc_workflow.sh --help` for guidlines
 
